@@ -1,0 +1,259 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 簡単ステータス管理Enum
+enum Status {
+  RELEASE
+  PRIVATE
+}
+
+// 公開・非公開・非表示管理ステータスEnum
+enum PublicationStatus {
+  RELEASE
+  PRIVATE
+  ARCHIVE
+}
+
+// ======================
+// 店舗関係テーブル
+// ======================
+//店舗
+model Store {
+  id             Int               @id @default(autoincrement())
+  name           String            @db.VarChar(255)
+  address        String?           @db.VarChar(255)
+  acsess         String?
+  business_time  String?
+  payment        String?
+  parking        String?
+  reservation    String?
+  official_link  String?
+  longitude      Float?
+  latitude       Float?
+  chain_store_id Int               @default(0) // 0以上指定の場合にチェーン店と紐づく
+  gender_id      Int
+  prefecture_id  Int
+  city_id        Int
+  station_id     Int
+  status         PublicationStatus @default(PRIVATE)
+  created_at     DateTime?         @default(now())
+  updated_at     DateTime?         @updatedAt
+
+  @@index([prefecture_id])
+  @@index([city_id])
+  @@index([station_id])
+  @@index([chain_store_id])
+  @@map("stores")
+}
+
+//店舗の性別
+model Gender {
+  id   Int    @id @default(autoincrement())
+  name String @db.VarChar(255)
+
+  @@map("genders")
+}
+
+//店舗のおすすめポイント
+model PointText {
+  id         Int               @id @default(autoincrement())
+  content    String            @db.VarChar(255)
+  order      Int
+  store_id   Int
+  start_date DateTime
+  end_date   DateTime
+  status     PublicationStatus @default(PRIVATE)
+  created_at DateTime?         @default(now())
+  updated_at DateTime?         @updatedAt
+
+  @@index([store_id])
+  @@map("point_texts")
+}
+
+//店舗の紹介文
+model IntroductionText {
+  id         Int               @id @default(autoincrement())
+  title      String
+  content    String
+  order      Int
+  store_id   Int
+  start_date DateTime
+  end_date   DateTime
+  status     PublicationStatus @default(PRIVATE)
+  created_at DateTime?         @default(now())
+  updated_at DateTime?         @updatedAt
+
+  @@index([store_id])
+  @@map("introduction_texts")
+}
+
+//店舗のコース・料金
+model Course {
+  id          Int               @id @default(autoincrement())
+  name        String?
+  description String?
+  price       Int?
+  order       Int
+  store_id    Int
+  start_date  DateTime
+  end_date    DateTime
+  status      PublicationStatus @default(PRIVATE)
+  created_at  DateTime?         @default(now())
+  updated_at  DateTime?         @updatedAt
+
+  @@index([store_id])
+  @@map("courses")
+}
+
+//店舗画像
+model Image {
+  id         Int       @id @default(autoincrement())
+  url        String
+  order      Int
+  store_id   Int
+  created_at DateTime? @default(now())
+  updated_at DateTime? @updatedAt
+
+  @@index([store_id])
+  @@map("images")
+}
+
+// ======================
+
+// ======================
+// チェーン店関係テーブル(チェーン店毎のグループ化)
+// ======================
+// チェーン店
+model ChainStore {
+  id         Int               @id @default(autoincrement())
+  name       String            @db.VarChar(255)
+  gender_id  Int
+  status     PublicationStatus @default(PRIVATE)
+  created_at DateTime?         @default(now())
+  updated_at DateTime?         @updatedAt
+
+  @@map("chain_stores")
+}
+
+// ======================
+
+// ======================
+// 検索関係テーブル
+// ======================
+//都道府県
+model Prefecture {
+  id   Int    @id @default(autoincrement())
+  name String @db.VarChar(255)
+
+  @@map("prefectures")
+}
+
+//市区町村
+model City {
+  id            Int    @id @default(autoincrement())
+  name          String @db.VarChar(255)
+  prefecture_id Int
+
+  @@index([prefecture_id])
+  @@map("cities")
+}
+
+//駅
+model Station {
+  id          Int    @id @default(autoincrement())
+  name        String @db.VarChar(255)
+  line_id     Int
+  redirect_id Int
+  city_id     Int
+  longitude   Float
+  latitude    Float
+  status      Status @default(RELEASE)
+
+  @@index([city_id])
+  @@index([line_id])
+  @@map("stations")
+}
+
+// 駅と店舗の中間テーブル
+model StationStore {
+  id            Int  @id @default(autoincrement())
+  station_id    Int
+  store_id      Int
+  walk_time     Int?
+  walk_distance Int?
+
+  @@index([station_id])
+  @@index([store_id])
+  @@map("station_stores")
+}
+
+model Lines {
+  id   Int    @id @default(autoincrement())
+  name String @db.VarChar(255)
+
+  @@map("lines")
+}
+
+// ======================
+
+// ======================
+// 商材関係テーブル
+// ======================
+// 商材テーブル
+model Affiliate {
+  id          Int               @id @default(autoincrement())
+  name        String            @db.VarChar(255)
+  description String?
+  price       Int
+  url         String
+  image_url   String?
+  status      PublicationStatus @default(PRIVATE)
+  created_at  DateTime?         @default(now())
+  updated_at  DateTime?         @updatedAt
+
+  @@map("affiliates")
+}
+
+// 商材と店舗の中間テーブル
+model AffiliateStore {
+  id            Int               @id @default(autoincrement())
+  affiliate_id  Int
+  store_id      Int
+  position_type Int //店舗の訴求内容によって出し分ける。タイプの番号あとで決める
+  is_force_flag Boolean           @default(false)
+  status        PublicationStatus @default(PRIVATE)
+  start_date    DateTime
+  end_date      DateTime
+  created_at    DateTime?         @default(now())
+  updated_at    DateTime?         @updatedAt
+
+  @@index([affiliate_id])
+  @@index([store_id])
+  @@map("affiliate_stores")
+}
+
+// トップバナー(商材バナー限定)
+model AffiliateTopBanner {
+  id           Int               @id @default(autoincrement())
+  affiliate_id Int
+  order        Int
+  status       PublicationStatus @default(PRIVATE)
+  start_date   DateTime
+  end_date     DateTime
+  created_at   DateTime?         @default(now())
+  updated_at   DateTime?         @updatedAt
+
+  @@index([affiliate_id])
+  @@map("affiliate_top_banners")
+}
+
+// ======================

@@ -1,0 +1,13 @@
+version: '3'
+services:
+  front-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: enjoylife-pj01-frontend
+    volumes:
+      - ./src/app:/app
+    command: sh -c "npm run dev"
+    tty: true
+    ports:
+      - 3000:3000
